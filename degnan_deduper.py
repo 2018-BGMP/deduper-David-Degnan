@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import argparse
+import sys
 
 # Declare tuple of UMIs
 UMIList = ("AACGCCAT","AAGGTACG","AATTCCGG","ACACAGAG","ACACTCAG","ACACTGTG",
@@ -27,6 +28,8 @@ def get_arguments():
     '''Takes one input file'''
     parser = argparse.ArgumentParser(description = "Deduper Inputs")
     parser.add_argument("-f", "--file", help= "Designates the Input File", required=True, type=str)
+    parser.add_argument("-p", "--paired", help= "(Unsupported) Designates if paired end", required=False, type=str)
+    parser.add_argument("-u", "--umi", help= "(Unsupported) Designates the UMI list", required=False, type=str)
     return parser.parse_args()
 
 def TestUMI(UMI):
@@ -112,18 +115,18 @@ def main():
     # Get file arguments
     args = get_arguments()
     File = args.file
+    
+    if args.paired is not None or args.umi is not None:
+        print("Hey friend! That's not supported. You can literally only use the -f flag which is required.")
+        sys.exit()
    
     In_File = open(File, "r")
     
     # Create File Names
     deduped = File.replace(".sam", "") + "_Deduped.sam"
-    duplicated = File.replace(".sam", "") + "_Duplicated.sam"
-    badumi = File.replace(".sam", "") + "_BadUMI.sam"
     
     # Open Files
     Deduped = open(deduped, "w")
-    Duplicated = open(duplicated, "w")
-    BadUMI = open(badumi, "w")
     
     # Read all the lines in file
     while True:
@@ -136,10 +139,7 @@ def main():
             
             # Get the variables for each line and test UMI
             UMI = Line[0].split(":")[7]
-            if TestUMI(UMI) == False:
-                BadUMI.write(ToWrite)
-            
-            else:
+            if TestUMI(UMI) == True:
                 CHR = Line[2]
                 POS = Line[3]
                 CIGAR = Line[5]
@@ -160,8 +160,6 @@ def main():
                     if key not in chr_f:
                         chr_f[key] = 1
                         Deduped.write(ToWrite)             
-                    else:
-                        Duplicated.write(ToWrite)
 
                 elif Forward == False:
                     POS = AdjustPosRev(CIGAR, POS)
@@ -169,11 +167,7 @@ def main():
                     if key not in chr_r:
                         chr_r[key] = 1
                         Deduped.write(ToWrite)    
-                    else:
-                        Duplicated.write(ToWrite)
+
     Deduped.close()
-    Duplicated.close()
-    BadUMI.close()
-            
             
 main()
